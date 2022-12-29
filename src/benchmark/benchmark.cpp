@@ -149,7 +149,7 @@ void run(const unsigned &thread_id,
         // Parse type that has "|" into READ/UPDAT proportions
         if (type.find('|') != string::npos) {
           // Split the string into parts using "|" as the delimiter
-          stringstream ss(type);
+          std::stringstream ss(type);
           string part;
           if (getline(ss, part, '|')) {
               // First segment: read proportion

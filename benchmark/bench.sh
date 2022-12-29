@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 5 ]; then
+if [ $# -lt 4 ]; then
   echo "Usage: $0 load/run workload_letter object_size concurrency"
   echo "If no build option is specified, the test will default to not building."
 
@@ -25,10 +25,11 @@ echo "Starting benchmark driver..."
 BPID=$!
 echo $BPID > bench_pid
 
-echo "Trigger benchmark command..."
-/usr/bin/expect <<EOD
+echo "Trigger benchmark using command: $CMD ..."
+/usr/bin/expect <<EOF
 spawn ./build/target/benchmark/anna-bench-trigger $CONCURRENCY
-expect "command> "
+expect "command>"
 send "$CMD\n"
-EOD
+expect eof
+EOF
 echo ""

@@ -26,10 +26,11 @@ echo "Starting benchmark server..."
 BPID=$!
 echo $BPID > bench_pid
 
-echo "Trigger benchmark command..."
-/usr/bin/expect <<EOD
+echo "Trigger benchmark using command: $CMD ..."
+/usr/bin/expect <<EOF
 spawn ./build/target/benchmark/anna-bench-trigger $CONCURRENCY
-expect "command> "
+expect "command>"
 send "$CMD\n"
-EOD
+expect eof
+EOF
 echo ""
