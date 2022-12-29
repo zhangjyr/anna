@@ -302,7 +302,7 @@ void run(const unsigned &thread_id,
         auto warmup_start = std::chrono::system_clock::now();
 
         for (unsigned i = start; i < end; i++) {
-          if (i % 50000 == 0) {
+          if (i % 100 == 0) {
             log->info("Creating key {}.", i);
           }
 
