@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -gt 5 ]; then
+if [ $# -lt 5 ]; then
   echo "Usage: $0 load/run workload_letter object_size concurrency"
   echo "If no build option is specified, the test will default to not building."
 
@@ -18,12 +18,12 @@ fi
 
 CMD=`cat $CONF`
 
-cp conf/anna-benchmark.yml conf/anna-config.yml
+# cp conf/anna-benchmark.yml conf/anna-config.yml
 
 echo "Starting benchmark driver..."
-/home/ubuntu/hydro-project/anna
-./build/target/benchmark/anna-bench 1>log 2>&1 &
-echo $BPID >> pids
+./build/target/benchmark/anna-bench &
+BPID=$!
+echo $BPID > bench_pid
 
 echo "Trigger benchmark command..."
 /usr/bin/expect <<EOD

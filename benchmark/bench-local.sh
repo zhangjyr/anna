@@ -22,9 +22,9 @@ echo "Starting local server..."
 ./scripts/start-anna-local.sh n n # Don't build, don't start user
 
 echo "Starting benchmark server..."
-/home/ubuntu/hydro-project/anna
-./build/target/benchmark/anna-bench 1>log 2>&1 &
-echo $BPID >> pids
+./build/target/benchmark/anna-bench &
+BPID=$!
+echo $BPID > bench_pid
 
 echo "Trigger benchmark command..."
 /usr/bin/expect <<EOD
