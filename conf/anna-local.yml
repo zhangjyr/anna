@@ -1,3 +1,5 @@
+benchmark:
+  - 127.0.0.1
 monitoring:
   mgmt_ip: 127.0.0.1
   ip: 127.0.0.1

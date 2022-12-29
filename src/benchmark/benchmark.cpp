@@ -144,6 +144,20 @@ void run(const unsigned &thread_id,
         unsigned report_period = stoi(v[4]);
         unsigned time = stoi(v[5]);
         double zipf = stod(v[6]);
+        double read_proportion, update_proportion = 0.0;
+
+        // Parse type that has "|" into READ/UPDAT proportions
+        if (type.find('|') != string::npos) {
+          // Split the string into parts using "|" as the delimiter
+          stringstream ss(type);
+          string part;
+          if (getline(ss, part, '|')) {
+              // First segment: read proportion
+              read_proportion = stod(part);
+          }
+          update_proportion = 100.0 - read_proportion;
+          log->info("Workload proportions READs:{}, UPDATEs:{}.", read_proportion, update_proportion);
+        }
 
         map<unsigned, double> sum_probs;
         double base;
@@ -221,6 +235,24 @@ void run(const unsigned &thread_id,
                    key_latency) /
                   (observed_latency[key].second + 1);
               observed_latency[key].second += 1;
+            }
+          } else if (read_proportion > 0 || update_proportion > 0) {
+            // Add support to READ/UPDATE proportion
+            double z = rand_r(&seed) % 100;
+            if (z < read_proportion) {
+              // Read
+              client.get_async(key);
+                receive(&client);
+                count += 1;
+            } else {
+              // Update
+              unsigned ts = generate_timestamp(thread_id);
+              LWWPairLattice<string> val(
+                  TimestampValuePair<string>(ts, string(length, 'a')));
+
+              client.put_async(key, serialize(val), LatticeType::LWW);
+              receive(&client);
+              count += 1;
             }
           } else {
             log->info("{} is an invalid request type.", type);
