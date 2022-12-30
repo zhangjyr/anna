@@ -111,8 +111,8 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
       string mode = v[0];
 
       if (mode == "STATS") {
-        string type = ""
-        if (len(v) > 1) {
+        string type = "";
+        if (v.size() > 1) {
           type = v[1];
         }
         
@@ -128,7 +128,7 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
         } else if (type == "WAITDONE") {
           string expected_threads = v[2];
           string output = "";
-          if (len(v) < 4) {
+          if (v.size() < 4) {
             log->info("Stats: waiting for {} threads to finish.", expected_threads);
           } else {
             output = v[3];
@@ -147,8 +147,9 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
             auto writer = spdlog::basic_logger_mt("output", output, true);
             auto formatter = std::make_shared<spdlog::pattern_formatter>(pattern);
             writer->set_formatter(formatter);
+            writer->flush_on(spdlog::level::info);
 
-            writer->info("[OVERALL], Runtime(ms), {}", std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count())
+            writer->info("[OVERALL], Runtime(ms), {}", std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count());
             writer->info("[OVERALL], Throughput(ops/sec), {}", latency.throughput());
             writer->info("[READ], Total Operations, {}", latency.num());
             writer->info("[READ], Average, {}", latency.mean());
@@ -164,7 +165,7 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
             writer->info("[READ], p99.99, {}", latency.percentile(99.99));
             writer->info("[READ], Return=OK, {}", latency.num());
 
-            log->Info("Stats: outputed")
+            log->info("Stats: outputed");
           }
         } else {
           unsigned elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count();

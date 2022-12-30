@@ -31,6 +31,8 @@ echo "Trigger benchmark using command: $CMD ..."
 spawn ./build/target/benchmark/anna-bench-trigger $CONCURRENCY
 expect "command>"
 send "$CMD\n"
+expect "command>"
+send "STATS:WAITDONE:$CONCURRENCY\n"
 expect eof
 EOF
 echo ""

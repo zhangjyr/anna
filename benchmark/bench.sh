@@ -17,6 +17,7 @@ if [ "$1" == "load" ]; then
 else
   CONF=./benchmark/${WORKLOAD}_${OBJECT_SIZE}.conf
   OUTPUT=./data/anna${WORKLOAD_CLS}_${OBJECT_SIZE}_c${CONCURRENCY}_summary.txt
+  rm -f $OUTPUT
   DONE_PARAMS=":$OUTPUT"
 fi
 
