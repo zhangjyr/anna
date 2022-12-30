@@ -16,7 +16,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.6 FATAL_ERROR)
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/target/benchmark)
 
-ADD_EXECUTABLE(anna-bench benchmark.cpp)
+ADD_EXECUTABLE(anna-bench benchmark.cpp stats.cpp)
 TARGET_LINK_LIBRARIES(anna-bench anna-hash-ring ${KV_LIBRARY_DEPENDENCIES}
   anna-bench-proto)
 ADD_DEPENDENCIES(anna-bench zeromq zeromqcpp)

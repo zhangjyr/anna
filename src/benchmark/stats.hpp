@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <cstring> // for memset
+#include <chrono>
 
 typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::system_clock::duration> Time;
 typedef std::chrono::system_clock::duration Duration;

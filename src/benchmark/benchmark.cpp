@@ -83,7 +83,7 @@ string generate_key(unsigned n) {
   return string(8 - std::to_string(n).length(), '0') + std::to_string(n);
 }
 
-void run_control(const unsigned &thread_id, const Address &ip, const Stats &latency) {
+void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
   string log_file = "bench_log.txt";
   string logger_name = "benchmark_log";
   auto log = spdlog::basic_logger_mt(logger_name, log_file, true);
@@ -95,7 +95,6 @@ void run_control(const unsigned &thread_id, const Address &ip, const Stats &late
   zmq::socket_t command_puller(context, ZMQ_PULL);
   command_puller.bind("tcp://*:" +
                       std::to_string(thread_id + kBenchmarkCommandPort));
-  BenchmarkThread bt = BenchmarkThread(address, thread_id);
 
   vector<zmq::pollitem_t> pollitems = {
       {static_cast<void *>(command_puller), 0, ZMQ_POLLIN, 0}};
@@ -112,7 +111,10 @@ void run_control(const unsigned &thread_id, const Address &ip, const Stats &late
       string mode = v[0];
 
       if (mode == "STATS") {
-        string type = v[1];
+        string type = ""
+        if (len(v) > 1) {
+          type = v[1];
+        }
         
         if (type == "RESET") {
           log->info("Stats: reset.");
@@ -123,9 +125,50 @@ void run_control(const unsigned &thread_id, const Address &ip, const Stats &late
           log->info("Stats: average latency {}ms", latency.mean());
         } else if (type == "THROUGHPUT") {
           log->info("Stats: Throughput {}ops", latency.throughput());
+        } else if (type == "WAITDONE") {
+          string expected_threads = v[2];
+          string output = "";
+          if (len(v) < 4) {
+            log->info("Stats: waiting for {} threads to finish.", expected_threads);
+          } else {
+            output = v[3];
+            log->info("Stats: waiting for {} threads to finish and output data to {}.", expected_threads, output);
+          }
+
+          // Wait finish
+          while (latency.get_finished() < std::stoi(expected_threads)) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+          }
+          log->info("Stats: all threads({}) finished.", latency.get_finished());
+          
+          if (output != "") {
+            // Output YCSB compatible summary data
+            auto pattern = "%^%v%$";  // %^ and %$ are used to set color
+            auto writer = spdlog::basic_logger_mt("output", output, true);
+            auto formatter = std::make_shared<spdlog::pattern_formatter>(pattern);
+            writer->set_formatter(formatter);
+
+            writer->info("[OVERALL], Runtime(ms), {}", std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count())
+            writer->info("[OVERALL], Throughput(ops/sec), {}", latency.throughput());
+            writer->info("[READ], Total Operations, {}", latency.num());
+            writer->info("[READ], Average, {}", latency.mean());
+            writer->info("[READ], Min, {}", latency.min());
+            writer->info("[READ], Max, {}", latency.max());
+            writer->info("[READ], p1, {}", latency.percentile(1));
+            writer->info("[READ], p5, {}", latency.percentile(5));
+            writer->info("[READ], p50, {}", latency.percentile(50));
+            writer->info("[READ], p90, {}", latency.percentile(90));
+            writer->info("[READ], p95, {}", latency.percentile(95));
+            writer->info("[READ], p99, {}", latency.percentile(99));
+            writer->info("[READ], p99.9, {}", latency.percentile(99.9));
+            writer->info("[READ], p99.99, {}", latency.percentile(99.99));
+            writer->info("[READ], Return=OK, {}", latency.num());
+
+            log.Info("Stats: outputed")
+          }
         } else {
           unsigned elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count();
-          log->info("Stats: {} finished, avg latency {}ms, throughput {}ops, elasped: {}s.", latency.count, latency.mean(), latency.throughput(), elapsed_ms / 1000.0);
+          log->info("Stats: {} finished, avg latency {}ms, throughput {}ops, elasped: {}s.", latency.num(), latency.mean(), latency.throughput(), elapsed_ms / 1000.0);
         }
       } else {
         log->info("{} is an invalid mode.", mode);
@@ -138,7 +181,7 @@ void run(const unsigned &thread_id,
          const vector<UserRoutingThread> &routing_threads,
          const vector<MonitoringThread> &monitoring_threads,
          const Address &ip,
-         const Stats &latency) {
+         Stats &latency) {
   KvsClient client(routing_threads, ip, thread_id, 10000);
   string log_file = "bench_log_" + std::to_string(thread_id) + ".txt";
   string logger_name = "benchmark_log_" + std::to_string(thread_id);
@@ -249,8 +292,10 @@ void run(const unsigned &thread_id,
           Key key = generate_key(k);
 
           request_start = std::chrono::system_clock::now();
+          bool is_read = false;
 
           if (type == "G") {
+            is_read = true;
             client.get_async(key);
             receive(&client);
             count += 1;
@@ -263,6 +308,7 @@ void run(const unsigned &thread_id,
             receive(&client);
             count += 1;
           } else if (type == "M") {
+            is_read = true;
             auto req_start = std::chrono::system_clock::now();
             unsigned ts = generate_timestamp(thread_id);
             LWWPairLattice<string> val(
@@ -297,9 +343,10 @@ void run(const unsigned &thread_id,
             double z = rand_r(&seed) % 100;
             if (z < read_proportion) {
               // Read
+              is_read = true;
               client.get_async(key);
-                receive(&client);
-                count += 1;
+              receive(&client);
+              count += 1;
             } else {
               // Update
               unsigned ts = generate_timestamp(thread_id);
@@ -315,10 +362,10 @@ void run(const unsigned &thread_id,
           }
 
           epoch_end = std::chrono::system_clock::now();
-          auto request_elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+          auto request_elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
                                         epoch_end - request_start)
                                         .count();
-          latency.record(request_elapsed_ms);
+          latency.record(request_elapsed_us);
           auto time_elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                                   epoch_end - epoch_start)
                                   .count();
@@ -413,6 +460,9 @@ void run(const unsigned &thread_id,
       } else {
         log->info("{} is an invalid mode.", mode);
       }
+
+      // Mark finishing of the command
+      latency.add_finished();
     }
   }
 }
@@ -424,7 +474,7 @@ int main(int argc, char *argv[]) {
   }
 
   // initialize stats
-  Stats latency = Stats(10000); // 10s. Percentile slots should be aligned with timeouts in ms
+  Stats latency = Stats(10000000); // 10s. Percentile slots should be aligned with timeouts in us
 
   // read the YAML conf
   YAML::Node conf = YAML::LoadFile("conf/anna-config.yml");
@@ -466,7 +516,7 @@ int main(int argc, char *argv[]) {
   // NOTE: We create a new client for every single thread.
   for (unsigned thread_id = 0; thread_id < kBenchmarkThreadNum; thread_id++) {
     benchmark_threads.push_back(
-        std::thread(run, thread_id+1, routing_threads, monitoring_threads, ip, latency));
+        std::thread(run, thread_id+1, routing_threads, monitoring_threads, ip, std::ref(latency)));
   }
 
   // Start the control threads.

@@ -7,20 +7,27 @@ if [ $# -lt 4 ]; then
   exit 1
 fi
 
-WORKLOAD=workload$2
+WORKLOAD_CLS=$2
+WORKLOAD=workload$WORKLOAD_CLS
 OBJECT_SIZE=$3
 CONCURRENCY=$4
+DONE_PARAMS=""
 if [ "$1" == "load" ]; then
   CONF=./benchmark/warm_${OBJECT_SIZE}.conf
 else
   CONF=./benchmark/${WORKLOAD}_${OBJECT_SIZE}.conf
+  OUTPUT=./data/anna${WORKLOAD_CLS}_${OBJECT_SIZE}_c${CONCURRENCY}_summary.txt
+  DONE_PARAMS=":$OUTPUT"
 fi
 
 CMD=`cat $CONF`
 
 # cp conf/anna-benchmark.yml conf/anna-config.yml
 
+mkdir data
+
 echo "Starting benchmark driver..."
+./benchmark/shutdown.sh
 ./build/target/benchmark/anna-bench &
 BPID=$!
 echo $BPID > bench_pid
@@ -30,6 +37,8 @@ echo "Trigger benchmark using command: $CMD ..."
 spawn ./build/target/benchmark/anna-bench-trigger $CONCURRENCY
 expect "command>"
 send "$CMD\n"
+expect "command>"
+send "STATS:WAITDONE:$CONCURRENCY$DONE_PARAMS\n"
 expect eof
 EOF
 echo ""

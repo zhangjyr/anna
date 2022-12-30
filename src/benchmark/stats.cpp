@@ -112,7 +112,7 @@ Duration Stats::elapsed() {
 }
 
 long double Stats::throughput() {
-    long double count = this->count_on_end
+    long double count = this->count_on_end;
     if (this->finished == 0) {
         count = this->count;
     }
