@@ -27,6 +27,9 @@ unsigned kDefaultLocalReplication;
 ZmqUtil zmq_util;
 ZmqUtilInterface *kZmqUtil = &zmq_util;
 
+const int READ_STATS = 0;
+const int WRITE_STATS = 1;
+
 double get_base(unsigned N, double skew) {
   double base = 0;
   for (unsigned k = 1; k <= N; k++) {
@@ -149,21 +152,53 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
             writer->set_formatter(formatter);
             writer->flush_on(spdlog::level::info);
 
+            Stats *outputing = &latency
             writer->info("[OVERALL], Runtime(ms), {}", std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count());
             writer->info("[OVERALL], Throughput(ops/sec), {}", latency.throughput());
-            writer->info("[READ], Total Operations, {}", latency.num());
-            writer->info("[READ], Average, {}", latency.mean());
-            writer->info("[READ], Min, {}", latency.min());
-            writer->info("[READ], Max, {}", latency.max());
-            writer->info("[READ], p1, {}", latency.percentile(1));
-            writer->info("[READ], p5, {}", latency.percentile(5));
-            writer->info("[READ], p50, {}", latency.percentile(50));
-            writer->info("[READ], p90, {}", latency.percentile(90));
-            writer->info("[READ], p95, {}", latency.percentile(95));
-            writer->info("[READ], p99, {}", latency.percentile(99));
-            writer->info("[READ], p99.9, {}", latency.percentile(99.9));
-            writer->info("[READ], p99.99, {}", latency.percentile(99.99));
-            writer->info("[READ], Return=OK, {}", latency.num());
+            // Overall statistics
+            writer->info("[OVERALL], Total Operations, {}", outputing.num());
+            writer->info("[OVERALL], Average, {}", outputing.mean());
+            writer->info("[OVERALL], Min, {}", outputing.min());
+            writer->info("[OVERALL], Max, {}", outputing.max());
+            writer->info("[OVERALL], p1, {}", outputing.percentile(1));
+            writer->info("[OVERALL], p5, {}", outputing.percentile(5));
+            writer->info("[OVERALL], p50, {}", outputing.percentile(50));
+            writer->info("[OVERALL], p90, {}", outputing.percentile(90));
+            writer->info("[OVERALL], p95, {}", outputing.percentile(95));
+            writer->info("[OVERALL], p99, {}", outputing.percentile(99));
+            writer->info("[OVERALL], p99.9, {}", outputing.percentile(99.9));
+            writer->info("[OVERALL], p99.99, {}", outputing.percentile(99.99));
+            writer->info("[OVERALL], Return=OK, {}", outputing.num());
+            // Read statistics
+            outputing = latency[READ_STATS];
+            writer->info("[READ], Total Operations, {}", outputing.num());
+            writer->info("[READ], Average, {}", outputing.mean());
+            writer->info("[READ], Min, {}", outputing.min());
+            writer->info("[READ], Max, {}", outputing.max());
+            writer->info("[READ], p1, {}", outputing.percentile(1));
+            writer->info("[READ], p5, {}", outputing.percentile(5));
+            writer->info("[READ], p50, {}", outputing.percentile(50));
+            writer->info("[READ], p90, {}", outputing.percentile(90));
+            writer->info("[READ], p95, {}", outputing.percentile(95));
+            writer->info("[READ], p99, {}", outputing.percentile(99));
+            writer->info("[READ], p99.9, {}", outputing.percentile(99.9));
+            writer->info("[READ], p99.99, {}", outputing.percentile(99.99));
+            writer->info("[READ], Return=OK, {}", outputing.num());
+            // Write statistics
+            outputing = latency[WRITE_STATS];
+            writer->info("[UPDATE], Total Operations, {}", outputing.num());
+            writer->info("[UPDATE], Average, {}", outputing.mean());
+            writer->info("[UPDATE], Min, {}", outputing.min());
+            writer->info("[UPDATE], Max, {}", outputing.max());
+            writer->info("[UPDATE], p1, {}", outputing.percentile(1));
+            writer->info("[UPDATE], p5, {}", outputing.percentile(5));
+            writer->info("[UPDATE], p50, {}", outputing.percentile(50));
+            writer->info("[UPDATE], p90, {}", outputing.percentile(90));
+            writer->info("[UPDATE], p95, {}", outputing.percentile(95));
+            writer->info("[UPDATE], p99, {}", outputing.percentile(99));
+            writer->info("[UPDATE], p99.9, {}", outputing.percentile(99.9));
+            writer->info("[UPDATE], p99.99, {}", outputing.percentile(99.99));
+            writer->info("[UPDATE], Return=OK, {}", outputing.num());
 
             log->info("Stats: outputed");
           }
@@ -366,7 +401,11 @@ void run(const unsigned &thread_id,
           auto request_elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
                                         epoch_end - request_start)
                                         .count();
-          latency.record(request_elapsed_us);
+          if (is_read) {
+            latency[READ_STATS]->record(request_elapsed_us);
+          } else {
+            latency[UPDATE_STATS]->record(request_elapsed_us);
+          }
           auto time_elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                                   epoch_end - epoch_start)
                                   .count();
@@ -475,7 +514,10 @@ int main(int argc, char *argv[]) {
   }
 
   // initialize stats
-  Stats latency = Stats(10000000); // 10s. Percentile slots should be aligned with timeouts in us
+  int slots = 10000000; // 10s. Percentile slots should be aligned with timeouts in us
+  Stats latency = Stats(slots); 
+  latency.add_stats(new Stats(slots)); // reads
+  latency.add_stats(new Stats(slots)); // updates
 
   // read the YAML conf
   YAML::Node conf = YAML::LoadFile("conf/anna-config.yml");

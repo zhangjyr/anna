@@ -13,46 +13,50 @@ void Stats::reset() {
   this->_start = std::chrono::system_clock::now();
   this->_end = this->_start;
   this->_count_on_end = 0;
+
+  for (auto child: this->_children) {
+    child->reset();
+  }
 }
 
 int Stats::record(uint64_t n) {
     if (n >= this->_limit) return 0;
     __sync_fetch_and_add(&this->_data[n], 1);
-    uint64_t first = !__sync_fetch_and_add(&this->_count, 1);
-    if (first) {
+    uint64_t fetched = __sync_fetch_and_add(&this->_count, 1);
+    if (fetched == 0) {
         this->_start = std::chrono::system_clock::now();
     }
     if (this->_finished == 0) {
-      __sync_fetch_and_add(&this->_count_on_end, 1);
+      // Once any thread has finished, we will not update this value again 
+      this->_count_on_end = fetched + 1; // Accuracy is not important here, we will verify the value on the first thread that finishes.
     }
     uint64_t min = this->_min;
     uint64_t max = this->_max;
     while (n < min) min = __sync_val_compare_and_swap(&this->_min, min, n);
     while (n > max) max = __sync_val_compare_and_swap(&this->_max, max, n);
-    return 1;
-}
 
-void Stats::correct(int64_t expected) {
-    for (uint64_t n = expected * 2; n <= this->_max; n++) {
-        uint64_t count = this->_data[n];
-        int64_t m = (int64_t) n - expected;
-        while (count && m > expected) {
-            this->_data[m] += count;
-            this->_count += count;
-            m -= expected;
-        }
+    if (this->_parent) {
+        this->_parent->record(n);
     }
+
+    return 1;
 }
 
 void Stats::add_finished() {
     uint64_t finished = !__sync_fetch_and_add(&this->_finished, 1);
-     if (finished) {
+    // If this is the first thread to finish, we will update the end time.
+    if (finished) {
+        this->_count_on_end = this->_count;
         this->_end = std::chrono::system_clock::now();
+        // Notify the children to conclue, call once only.
+        for (auto child: this->_children) {
+            child->add_finished();
+        }
     }
 }
 
 uint64_t Stats::num() {
-    return this->_count;
+    return this->_count_on_end;
 }
 
 uint64_t Stats::min() {
@@ -125,6 +129,17 @@ long double Stats::throughput() {
         count = this->_count;
     }
     return count / std::chrono::duration_cast<std::chrono::milliseconds>(this->elapsed()).count() * 1000;
+}
+
+// add_stats adds the child stats.
+void Stats::add_stats(Stats *stats) {
+    this->_children.push_back(stats);
+    stats->_parent = this;
+}
+
+// operation[] overrides the [] operator to return the child stats.
+Stats* Stats::operator[](int index) {
+    return this->_children.at(index);
 }
 
 uint64_t Stats::popcount() {
