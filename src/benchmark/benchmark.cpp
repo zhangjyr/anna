@@ -18,6 +18,7 @@
 #include "client/kvs_client.hpp"
 #include "kvs_threads.hpp"
 #include "yaml-cpp/yaml.h"
+#include "stats.hpp"
 
 unsigned kBenchmarkThreadNum;
 unsigned kRoutingThreadCount;
@@ -82,10 +83,62 @@ string generate_key(unsigned n) {
   return string(8 - std::to_string(n).length(), '0') + std::to_string(n);
 }
 
+void run_control(const unsigned &thread_id, const Address &ip, const Stats &latency) {
+  string log_file = "bench_log.txt";
+  string logger_name = "benchmark_log";
+  auto log = spdlog::basic_logger_mt(logger_name, log_file, true);
+  log->flush_on(spdlog::level::info);
+
+  // responsible for pulling benchmark commands
+  zmq::context_t context(1);
+  SocketCache pushers(&context, ZMQ_PUSH);
+  zmq::socket_t command_puller(context, ZMQ_PULL);
+  command_puller.bind("tcp://*:" +
+                      std::to_string(thread_id + kBenchmarkCommandPort));
+  BenchmarkThread bt = BenchmarkThread(address, thread_id);
+
+  vector<zmq::pollitem_t> pollitems = {
+      {static_cast<void *>(command_puller), 0, ZMQ_POLLIN, 0}};
+
+  while (true) {
+    kZmqUtil->poll(-1, &pollitems);
+
+    if (pollitems[0].revents & ZMQ_POLLIN) {
+      string msg = kZmqUtil->recv_string(&command_puller);
+      log->info("Received benchmark command: {}", msg);
+
+      vector<string> v;
+      split(msg, ':', v);
+      string mode = v[0];
+
+      if (mode == "STATS") {
+        string type = v[1];
+        
+        if (type == "RESET") {
+          log->info("Stats: reset.");
+          latency.reset();
+        } else if (type == "FINISHED") {
+          log->info("Stats: finished {}", latency.get_finished());
+        } else if (type == "LATENCY") {
+          log->info("Stats: average latency {}ms", latency.mean());
+        } else if (type == "THROUGHPUT") {
+          log->info("Stats: Throughput {}ops", latency.throughput());
+        } else {
+          unsigned elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count();
+          log->info("Stats: {} finished, avg latency {}ms, throughput {}ops, elasped: {}s.", latency.count, latency.mean(), latency.throughput(), elapsed_ms / 1000.0);
+        }
+      } else {
+        log->info("{} is an invalid mode.", mode);
+      }
+    }
+  }
+}
+
 void run(const unsigned &thread_id,
          const vector<UserRoutingThread> &routing_threads,
          const vector<MonitoringThread> &monitoring_threads,
-         const Address &ip) {
+         const Address &ip,
+         const Stats &latency) {
   KvsClient client(routing_threads, ip, thread_id, 10000);
   string log_file = "bench_log_" + std::to_string(thread_id) + ".txt";
   string logger_name = "benchmark_log_" + std::to_string(thread_id);
@@ -179,6 +232,7 @@ void run(const unsigned &thread_id,
         auto benchmark_end = std::chrono::system_clock::now();
         auto epoch_start = std::chrono::system_clock::now();
         auto epoch_end = std::chrono::system_clock::now();
+        auto request_start = std::chrono::system_clock::now();
         auto total_time = std::chrono::duration_cast<std::chrono::seconds>(
                               benchmark_end - benchmark_start)
                               .count();
@@ -193,6 +247,8 @@ void run(const unsigned &thread_id,
           }
 
           Key key = generate_key(k);
+
+          request_start = std::chrono::system_clock::now();
 
           if (type == "G") {
             client.get_async(key);
@@ -259,6 +315,10 @@ void run(const unsigned &thread_id,
           }
 
           epoch_end = std::chrono::system_clock::now();
+          auto request_elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        epoch_end - request_start)
+                                        .count();
+          latency.record(request_elapsed_ms);
           auto time_elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                                   epoch_end - epoch_start)
                                   .count();
@@ -363,6 +423,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // initialize stats
+  Stats latency = Stats(10000); // 10s. Percentile slots should be aligned with timeouts in ms
+
   // read the YAML conf
   YAML::Node conf = YAML::LoadFile("conf/anna-config.yml");
   YAML::Node user = conf["user"];
@@ -401,10 +464,11 @@ int main(int argc, char *argv[]) {
   }
 
   // NOTE: We create a new client for every single thread.
-  for (unsigned thread_id = 1; thread_id < kBenchmarkThreadNum; thread_id++) {
+  for (unsigned thread_id = 0; thread_id < kBenchmarkThreadNum; thread_id++) {
     benchmark_threads.push_back(
-        std::thread(run, thread_id, routing_threads, monitoring_threads, ip));
+        std::thread(run, thread_id+1, routing_threads, monitoring_threads, ip, latency));
   }
 
-  run(0, routing_threads, monitoring_threads, ip);
+  // Start the control threads.
+  run_control(0, ip, latency);
 }

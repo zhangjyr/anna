@@ -56,9 +56,17 @@ int main(int argc, char *argv[]) {
     std::cout << "command> ";
     getline(std::cin, command);
 
+    // Control commands will be sent to the first thread.
+    if (command.find("STATS:") == 0) {
+      BenchmarkThread bt = BenchmarkThread(address, 0);
+      kZmqUtil->send_string(command, &pushers[bt.benchmark_command_address()]);
+      continue;
+    }
+
+    // Benchmark commands will be sent to all threads.
     for (const Address address : benchmark_address) {
       for (unsigned tid = 0; tid < thread_num; tid++) {
-        BenchmarkThread bt = BenchmarkThread(address, tid);
+        BenchmarkThread bt = BenchmarkThread(address, tid+1);
 
         kZmqUtil->send_string(command,
                               &pushers[bt.benchmark_command_address()]);
