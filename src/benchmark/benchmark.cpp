@@ -164,7 +164,7 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
             writer->info("[READ], p99.99, {}", latency.percentile(99.99));
             writer->info("[READ], Return=OK, {}", latency.num());
 
-            log.Info("Stats: outputed")
+            log->Info("Stats: outputed")
           }
         } else {
           unsigned elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count();

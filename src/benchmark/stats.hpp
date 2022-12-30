@@ -10,24 +10,24 @@ typedef std::chrono::system_clock::duration Duration;
 
 class Stats {
  private: 
-  uint64_t count;
-  uint64_t limit;
-  uint64_t min;
-  uint64_t max;
-  uint64_t *data;
-  uint64_t finished;
-  Time start;
-  Time end;
-  uint64_t count_on_end;
+  uint64_t _count;
+  uint64_t _limit;
+  uint64_t _min;
+  uint64_t _max;
+  uint64_t *_data;
+  uint64_t _finished;
+  Time _start;
+  Time _end;
+  uint64_t _count_on_end;
   
  public:
-  Stats(uint64_t max): limit(max+1) {
-    this->data = new uint64_t[this->limit];
+  Stats(uint64_t max): _limit(max+1) {
+    this->_data = new uint64_t[this->_limit];
     this->reset();
   }
 
   ~Stats() {
-    delete[] this->data;
+    delete[] this->_data;
   }
 
   void reset();
@@ -37,6 +37,8 @@ class Stats {
   void add_finished();
 
   uint64_t num();
+  uint64_t min();
+  uint64_t max();
   long double mean();
   long double stdev(long double);
   long double within_stdev(long double, long double, uint64_t);
