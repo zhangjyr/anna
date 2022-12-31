@@ -7,6 +7,8 @@ if [ $# -gt 5 ]; then
   exit 1
 fi
 
-cp conf/anna-benchmark.yml conf/anna-config.yml
+echo "Starting local server..."
+./scripts/start-anna-local.sh n n # Don't build, don't start user
 
 ./benchmark/bench.sh $1 $2 $3 $4
+

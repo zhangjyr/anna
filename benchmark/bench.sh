@@ -25,9 +25,11 @@ CMD=`cat $CONF`
 
 mkdir data
 
+if [ -f "bench_pid" ]; then
+  ./benchmark/shutdown.sh y
+fi
 echo "Starting benchmark driver..."
-./benchmark/shutdown.sh y
-./build/target/benchmark/anna-bench &
+./build/target/benchmark/anna-bench $CONCURRENCY &
 BPID=$!
 echo $BPID > bench_pid
 
@@ -38,6 +40,6 @@ expect "command>"
 send "$CMD\n"
 expect "command>"
 send "STATS:WAITDONE:$CONCURRENCY$DONE_PARAMS\n"
-expect eof
+expect "command>"
 EOF
 echo ""
