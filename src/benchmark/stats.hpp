@@ -26,7 +26,7 @@ class Stats {
   Stats *_parent;
   
  public:
-  Stats(uint64_t max): _limit(max+1) {
+  Stats(uint64_t max): _limit(max+1), _parent(NULL) {
     this->_data = new uint64_t[this->_limit];
     this->reset();
   }

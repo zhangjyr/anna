@@ -40,6 +40,6 @@ expect "command>"
 send "$CMD\n"
 expect "command>"
 send "STATS:WAITDONE:$CONCURRENCY$DONE_PARAMS\n"
-expect "command>"
+expect eof
 EOF
 echo ""

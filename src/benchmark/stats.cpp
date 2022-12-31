@@ -35,7 +35,7 @@ int Stats::record(uint64_t n) {
     while (n < min) min = __sync_val_compare_and_swap(&this->_min, min, n);
     while (n > max) max = __sync_val_compare_and_swap(&this->_max, max, n);
 
-    if (this->_parent) {
+    if (this->_parent != NULL) {
         this->_parent->record(n);
     }
 
