@@ -28,7 +28,7 @@ ZmqUtil zmq_util;
 ZmqUtilInterface *kZmqUtil = &zmq_util;
 
 const int READ_STATS = 0;
-const int WRITE_STATS = 1;
+const int UPDATE_STATS = 1;
 
 double get_base(unsigned N, double skew) {
   double base = 0;
@@ -152,53 +152,53 @@ void run_control(const unsigned &thread_id, const Address &ip, Stats &latency) {
             writer->set_formatter(formatter);
             writer->flush_on(spdlog::level::info);
 
-            Stats *outputing = &latency
+            Stats *outputing = &latency;
             writer->info("[OVERALL], Runtime(ms), {}", std::chrono::duration_cast<std::chrono::milliseconds>(latency.elapsed()).count());
             writer->info("[OVERALL], Throughput(ops/sec), {}", latency.throughput());
             // Overall statistics
-            writer->info("[OVERALL], Total Operations, {}", outputing.num());
-            writer->info("[OVERALL], Average, {}", outputing.mean());
-            writer->info("[OVERALL], Min, {}", outputing.min());
-            writer->info("[OVERALL], Max, {}", outputing.max());
-            writer->info("[OVERALL], p1, {}", outputing.percentile(1));
-            writer->info("[OVERALL], p5, {}", outputing.percentile(5));
-            writer->info("[OVERALL], p50, {}", outputing.percentile(50));
-            writer->info("[OVERALL], p90, {}", outputing.percentile(90));
-            writer->info("[OVERALL], p95, {}", outputing.percentile(95));
-            writer->info("[OVERALL], p99, {}", outputing.percentile(99));
-            writer->info("[OVERALL], p99.9, {}", outputing.percentile(99.9));
-            writer->info("[OVERALL], p99.99, {}", outputing.percentile(99.99));
-            writer->info("[OVERALL], Return=OK, {}", outputing.num());
+            writer->info("[OVERALL], Total Operations, {}", outputing->num());
+            writer->info("[OVERALL], Average, {}", outputing->mean());
+            writer->info("[OVERALL], Min, {}", outputing->min());
+            writer->info("[OVERALL], Max, {}", outputing->max());
+            writer->info("[OVERALL], p1, {}", outputing->percentile(1));
+            writer->info("[OVERALL], p5, {}", outputing->percentile(5));
+            writer->info("[OVERALL], p50, {}", outputing->percentile(50));
+            writer->info("[OVERALL], p90, {}", outputing->percentile(90));
+            writer->info("[OVERALL], p95, {}", outputing->percentile(95));
+            writer->info("[OVERALL], p99, {}", outputing->percentile(99));
+            writer->info("[OVERALL], p99.9, {}", outputing->percentile(99.9));
+            writer->info("[OVERALL], p99.99, {}", outputing->percentile(99.99));
+            writer->info("[OVERALL], Return=OK, {}", outputing->num());
             // Read statistics
             outputing = latency[READ_STATS];
-            writer->info("[READ], Total Operations, {}", outputing.num());
-            writer->info("[READ], Average, {}", outputing.mean());
-            writer->info("[READ], Min, {}", outputing.min());
-            writer->info("[READ], Max, {}", outputing.max());
-            writer->info("[READ], p1, {}", outputing.percentile(1));
-            writer->info("[READ], p5, {}", outputing.percentile(5));
-            writer->info("[READ], p50, {}", outputing.percentile(50));
-            writer->info("[READ], p90, {}", outputing.percentile(90));
-            writer->info("[READ], p95, {}", outputing.percentile(95));
-            writer->info("[READ], p99, {}", outputing.percentile(99));
-            writer->info("[READ], p99.9, {}", outputing.percentile(99.9));
-            writer->info("[READ], p99.99, {}", outputing.percentile(99.99));
-            writer->info("[READ], Return=OK, {}", outputing.num());
+            writer->info("[READ], Total Operations, {}", outputing->num());
+            writer->info("[READ], Average, {}", outputing->mean());
+            writer->info("[READ], Min, {}", outputing->min());
+            writer->info("[READ], Max, {}", outputing->max());
+            writer->info("[READ], p1, {}", outputing->percentile(1));
+            writer->info("[READ], p5, {}", outputing->percentile(5));
+            writer->info("[READ], p50, {}", outputing->percentile(50));
+            writer->info("[READ], p90, {}", outputing->percentile(90));
+            writer->info("[READ], p95, {}", outputing->percentile(95));
+            writer->info("[READ], p99, {}", outputing->percentile(99));
+            writer->info("[READ], p99.9, {}", outputing->percentile(99.9));
+            writer->info("[READ], p99.99, {}", outputing->percentile(99.99));
+            writer->info("[READ], Return=OK, {}", outputing->num());
             // Write statistics
-            outputing = latency[WRITE_STATS];
-            writer->info("[UPDATE], Total Operations, {}", outputing.num());
-            writer->info("[UPDATE], Average, {}", outputing.mean());
-            writer->info("[UPDATE], Min, {}", outputing.min());
-            writer->info("[UPDATE], Max, {}", outputing.max());
-            writer->info("[UPDATE], p1, {}", outputing.percentile(1));
-            writer->info("[UPDATE], p5, {}", outputing.percentile(5));
-            writer->info("[UPDATE], p50, {}", outputing.percentile(50));
-            writer->info("[UPDATE], p90, {}", outputing.percentile(90));
-            writer->info("[UPDATE], p95, {}", outputing.percentile(95));
-            writer->info("[UPDATE], p99, {}", outputing.percentile(99));
-            writer->info("[UPDATE], p99.9, {}", outputing.percentile(99.9));
-            writer->info("[UPDATE], p99.99, {}", outputing.percentile(99.99));
-            writer->info("[UPDATE], Return=OK, {}", outputing.num());
+            outputing = latency[UPDATE_STATS];
+            writer->info("[UPDATE], Total Operations, {}", outputing->num());
+            writer->info("[UPDATE], Average, {}", outputing->mean());
+            writer->info("[UPDATE], Min, {}", outputing->min());
+            writer->info("[UPDATE], Max, {}", outputing->max());
+            writer->info("[UPDATE], p1, {}", outputing->percentile(1));
+            writer->info("[UPDATE], p5, {}", outputing->percentile(5));
+            writer->info("[UPDATE], p50, {}", outputing->percentile(50));
+            writer->info("[UPDATE], p90, {}", outputing->percentile(90));
+            writer->info("[UPDATE], p95, {}", outputing->percentile(95));
+            writer->info("[UPDATE], p99, {}", outputing->percentile(99));
+            writer->info("[UPDATE], p99.9, {}", outputing->percentile(99.9));
+            writer->info("[UPDATE], p99.99, {}", outputing->percentile(99.99));
+            writer->info("[UPDATE], Return=OK, {}", outputing->num());
 
             log->info("Stats: outputed");
           }
@@ -508,8 +508,8 @@ void run(const unsigned &thread_id,
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 1) {
-    std::cerr << "Usage: " << argv[0] << std::endl;
+  if (argc > 2) {
+    std::cerr << "Usage: " << argv[0] << " [benchmark_threads]" << std::endl;
     return 1;
   }
 
@@ -535,6 +535,9 @@ int main(int argc, char *argv[]) {
   YAML::Node threads = conf["threads"];
   kRoutingThreadCount = threads["routing"].as<int>();
   kBenchmarkThreadNum = threads["benchmark"].as<int>();
+  if (argc > 1) {
+    kBenchmarkThreadNum = atoi(argv[1]);
+  }
   kDefaultLocalReplication = conf["replication"]["local"].as<unsigned>();
 
   vector<std::thread> benchmark_threads;

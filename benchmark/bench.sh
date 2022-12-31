@@ -23,12 +23,10 @@ fi
 
 CMD=`cat $CONF`
 
-# cp conf/anna-benchmark.yml conf/anna-config.yml
-
 mkdir data
 
 echo "Starting benchmark driver..."
-./benchmark/shutdown.sh
+./benchmark/shutdown.sh y
 ./build/target/benchmark/anna-bench &
 BPID=$!
 echo $BPID > bench_pid
