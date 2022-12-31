@@ -39,10 +39,11 @@ mkdir -p conf
 # determine separate private and public IP addresses. Otherwise, we use the
 # same one for both.
 IS_EC2=`curl -s http://169.254.169.254`
-PRIVATE_IP=`ifconfig eth0 | grep 'inet' | grep -v inet6 | sed -e 's/^[ \t]*//' | cut -d' ' -f2`
 if [[ ! -z "$IS_EC2" ]]; then
+  PRIVATE_IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
   PUBLIC_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
 else
+  PRIVATE_IP=`ifconfig eth0 | grep 'inet' | grep -v inet6 | sed -e 's/^[ \t]*//' | cut -d' ' -f2`
   PUBLIC_IP=$PRIVATE_IP
 fi
 
