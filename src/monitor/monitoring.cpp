@@ -228,10 +228,10 @@ int main(int argc, char *argv[]) {
       user_throughput.clear();
       latency_miss_ratio_map.clear();
 
-      collect_internal_stats(
-          global_hash_rings, local_hash_rings, pushers, mt, response_puller,
-          log, rid, key_access_frequency, key_size, memory_storage, ebs_storage,
-          memory_occupancy, ebs_occupancy, memory_accesses, ebs_accesses);
+      // collect_internal_stats(
+      //     global_hash_rings, local_hash_rings, pushers, mt, response_puller,
+      //     log, rid, key_access_frequency, key_size, memory_storage, ebs_storage,
+      //     memory_occupancy, ebs_occupancy, memory_accesses, ebs_accesses);
 
       compute_summary_stats(key_access_frequency, memory_storage, ebs_storage,
                             memory_occupancy, ebs_occupancy, memory_accesses,
